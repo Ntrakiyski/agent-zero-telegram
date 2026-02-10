@@ -1,6 +1,11 @@
+# Agent Zero Docker Compose Configuration
+# For Coolify deployment, add environment variables in your Coolify project settings
+# The container startup script will automatically write these to usr/secrets.env
+
 services:
   agent-zero:
     container_name: agent-zero-v2
+    image: agent0ai/agent-zero-base:latest
     build:
       context: .
       dockerfile: DockerfileLocal
@@ -9,16 +14,34 @@ services:
     ports:
       - "7643:80"
     environment:
-      # Authentication
+      # ============================================================
+      # Authentication (recommended for production)
+      # ============================================================
       - AUTH_LOGIN=${AUTH_LOGIN}
       - AUTH_PASSWORD=${AUTH_PASSWORD}
 
-      # LLM API Key (OpenRouter)
-      - API_KEY_OPENROUTER=${OPENROUTER_API_KEY}
+      # ============================================================
+      # LLM API Keys (required for agent to work)
+      # ============================================================
+      # OpenRouter (recommended - supports many models)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      # Or use OpenAI directly:
+      # - API_KEY_OPENAI=${API_KEY_OPENAI}
 
-      # Telegram Bot (optional - for Telegram integration)
+      # ============================================================
+      # Telegram Bot Integration (optional)
+      # ============================================================
+      # Get your token from @BotFather on Telegram
+      # When set, the bot will automatically be enabled
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      # Optional: Restrict access to specific Telegram user IDs
       - TELEGRAM_BOT_ALLOWED_USERS=${TELEGRAM_BOT_ALLOWED_USERS}
+
+      # ============================================================
+      # Additional Configuration (optional)
+      # ============================================================
+      # Enable telegram bot via settings (auto-enabled when TOKEN is set)
+      - A0_SET_TELEGRAM_BOT_ENABLED=${TELEGRAM_BOT_ENABLED:-true}
 
 volumes:
   agent-zero-data:

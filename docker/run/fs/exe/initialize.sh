@@ -16,6 +16,11 @@ cp -r --no-preserve=ownership,mode /per/* /
 chmod 444 /root/.bashrc
 chmod 444 /root/.profile
 
+# Setup environment variables from docker-compose
+if [ -f "/exe/setup_env_vars.sh" ]; then
+    bash /exe/setup_env_vars.sh
+fi
+
 # update package list to save time later
 apt-get update > /dev/null 2>&1 &
 
