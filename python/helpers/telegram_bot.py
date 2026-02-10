@@ -43,6 +43,7 @@ def _get_allowed_users() -> set[int]:
 async def _handle_message(update, context) -> None:
     from agent import AgentContext, UserMessage
     from initialize import initialize_agent
+    from python.helpers import message_queue as mq
 
     if update.message is None:
         return
@@ -61,6 +62,12 @@ async def _handle_message(update, context) -> None:
         return
 
     _PRINTER.print(f"Telegram message from user {telegram_user_id} in chat {telegram_chat_id}")
+
+    # Log the message to the context so it appears in the web UI
+    try:
+        mq.log_user_message(agent_context, user_text, [], source=" (Telegram)")
+    except Exception as e:
+        _PRINTER.print(f"Failed to log Telegram message to UI: {e}")
 
     lock = _get_chat_contexts_lock()
     async with lock:
@@ -88,6 +95,26 @@ async def _handle_message(update, context) -> None:
         result = await asyncio.wait_for(task.result(), timeout=TELEGRAM_MESSAGE_TIMEOUT)
 
         response_text = str(result) if result else "⚠️ No response received."
+
+        # Log the agent's response to the context so it appears in the web UI
+        try:
+            from agent import LogItem, LogType
+            from python.helpers.defer import DeferredTask
+
+            def log_response():
+                try:
+                    agent_context.log.add(LogItem(
+                        type=LogType.INFO,
+                        content=f"Telegram: {response_text}",
+                        agent_name="Agent"
+                    ))
+                except Exception:
+                    pass
+
+            DeferredTask().start_task(log_response)
+        except Exception as e:
+            _PRINTER.print(f"Failed to log Telegram response to UI: {e}")
+
         await _send_long_message(update.effective_chat.id, response_text, context)
 
     except asyncio.TimeoutError:
