@@ -16,6 +16,7 @@ _bot_lock = threading.Lock()
 _chat_contexts_lock: Optional[asyncio.Lock] = None
 _chat_contexts: dict[int, str] = {}
 _bot_shutdown = False
+_current_token: Optional[str] = None  # Track current token to avoid unnecessary restarts
 
 
 def _get_chat_contexts_lock() -> asyncio.Lock:
@@ -191,7 +192,9 @@ async def _run_polling_async() -> None:
         while not _bot_shutdown:
             await asyncio.sleep(0.5)
     except Exception as e:
-        _PRINTER.print(f"Telegram bot error: {e}")
+        # Ignore conflict errors during shutdown (expected when restarting)
+        if "Conflict" not in str(e) and "terminated by other getUpdates" not in str(e):
+            _PRINTER.print(f"Telegram bot error: {e}")
     finally:
         try:
             await _bot_app.updater.stop()
@@ -229,16 +232,21 @@ def _run_bot(token: str) -> None:
 
 
 def _stop_bot() -> None:
-    global _bot_shutdown, _bot_app, _bot_thread
+    global _bot_shutdown, _bot_app, _bot_thread, _current_token
     _bot_shutdown = True
     if _bot_thread is not None:
-        _bot_thread.join(timeout=10)
+        # Wait longer for the bot to gracefully shut down
+        _bot_thread.join(timeout=30)
+        # If thread is still alive, we can't do much more (it's a daemon thread)
+        if _bot_thread.is_alive():
+            _PRINTER.print("Warning: Previous bot thread did not stop cleanly")
         _bot_thread = None
     _bot_app = None
+    _current_token = None
 
 
 def reconfigure_bot() -> None:
-    global _bot_thread
+    global _bot_thread, _bot_shutdown, _current_token
 
     cfg = settings.get_settings()
     enabled = cfg.get("telegram_bot_enabled", False)
@@ -248,6 +256,11 @@ def reconfigure_bot() -> None:
     token = secrets.get("TELEGRAM_BOT_TOKEN", "")
 
     with _bot_lock:
+        # If bot is already running with the same token, skip restart
+        if _bot_thread is not None and _bot_thread.is_alive() and _current_token == token:
+            return  # Bot is already running with this token, no restart needed
+
+        # Stop the existing bot before starting a new one
         _stop_bot()
 
         if not enabled or not token:
@@ -258,6 +271,9 @@ def reconfigure_bot() -> None:
             return
 
         _PRINTER.print("Starting Telegram bot...")
+        # Reset shutdown flag before starting new bot
+        _bot_shutdown = False
+        _current_token = token
         _bot_thread = threading.Thread(target=_run_bot, args=(token,), daemon=True)
         _bot_thread.start()
 
