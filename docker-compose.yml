@@ -1,51 +1,97 @@
-# Agent Zero Docker Compose Configuration
-#
-# Environment variables are OPTIONAL - the app works without them.
-# You can configure everything through the web UI after deployment.
-#
-# For Coolify deployment, add environment variables in your Coolify project
-# settings. The container startup script will automatically write them to
-# usr/secrets.env for you.
+# Production Docker Compose for Coolify and other deployment platforms
+# This file is optimized for production deployments and builds from source using your fork
 
 services:
   agent-zero:
-    container_name: agent-zero-v2
-    image: agent0ai/agent-zero-base:latest
+    # Build from source instead of using pre-built image
     build:
       context: .
       dockerfile: DockerfileLocal
-    volumes:
-      - agent-zero-data:/a0
+      args:
+        # Set BRANCH=local to use the copied files from your fork
+        # instead of cloning from upstream repository
+        BRANCH: local
+        # Optional: Set to current date to bypass Docker cache during builds
+        # CACHE_DATE: 2025-01-01:00:00:00
+    image: agent-zero-custom:latest
+    container_name: agent-zero-v2
     ports:
+      # Web UI port - Container always listens on port 80
       - "7643:80"
+      # Additional ports for agent tools and services
+      - "9000-9009:9000-9009"
+    # Persistent storage to preserve data between deployments
+    # IMPORTANT: /a0/usr and /a0/tmp must be separate volumes!
+    volumes:
+      - agent-zero-data:/a0/usr      # Projects
+      - agent-zero-tmp:/a0/tmp       # Settings + chat history
+
+    # Environment variables from .env file or Coolify secrets
     environment:
+      # Web UI configuration
+      WEB_UI_PORT: 80
+      WEB_UI_HOST: 0.0.0.0
+      # Allowed origins for CORS (add your domain here when using custom domain)
+      # Format: *://your-domain.com:* or https://your-domain.com
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*://localhost:*,*://127.0.0.1:*,*://0.0.0.0:*}
+
       # ============================================================
       # OPTIONAL: Authentication
-      # Can also be configured in the web UI under Settings
+      # Can also be configured in the web UI under Settings > Authentication
       # ============================================================
-      - AUTH_LOGIN=${AUTH_LOGIN:-}
-      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
+      AUTH_LOGIN: ${AUTH_LOGIN:-}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-}
 
       # ============================================================
       # OPTIONAL: LLM API Keys
       # Can also be configured in the web UI under Settings > API Keys
       # ============================================================
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - API_KEY_OPENAI=${API_KEY_OPENAI:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      API_KEY_OPENAI: ${API_KEY_OPENAI:-}
 
       # ============================================================
       # OPTIONAL: Telegram Bot Integration
       # Get your token from @BotFather on Telegram
-      # Can also be configured in the web UI under Settings > Secrets
+      # Can also be configured in Settings > External Services > Telegram Bot
       # ============================================================
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
-      - TELEGRAM_BOT_ALLOWED_USERS=${TELEGRAM_BOT_ALLOWED_USERS:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_ALLOWED_USERS: ${TELEGRAM_BOT_ALLOWED_USERS:-}
 
       # ============================================================
       # OPTIONAL: Verbose startup logs
       # Set to "true" to see environment variable setup logs
       # ============================================================
-      - VERBOSE_SETUP=${VERBOSE_SETUP:-true}
+      VERBOSE_SETUP: ${VERBOSE_SETUP:-true}
+
+    restart: unless-stopped
+
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Traefik labels for Coolify proxy
+    # These labels tell Coolify's Traefik proxy how to route traffic to this service
+    labels:
+      # Enable Traefik for this service
+      - traefik.enable=true
+      # CRITICAL: Tell Traefik which port the service listens on
+      # Without this, Traefik doesn't know where to forward traffic -> 404 errors
+      - traefik.http.services.agent-zero.loadbalancer.server.port=80
 
 volumes:
   agent-zero-data:
+  agent-zero-tmp:

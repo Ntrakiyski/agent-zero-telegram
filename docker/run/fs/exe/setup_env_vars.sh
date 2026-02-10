@@ -15,16 +15,21 @@ fi
 
 echo "[setup_env_vars] Setting up environment variables..."
 
-# Ensure usr directory exists
+# Ensure directories exist
+# Settings and secrets go in /a0/tmp/usr (for settings + chat history volume)
+# Projects go in /a0/usr (for projects volume)
+mkdir -p /a0/tmp/usr 2>/dev/null
 mkdir -p /a0/usr 2>/dev/null
-if [ ! -d "/a0/usr" ]; then
-    echo "[setup_env_vars] ERROR: Cannot create /a0/usr directory"
+
+if [ ! -d "/a0/tmp/usr" ]; then
+    echo "[setup_env_vars] ERROR: Cannot create /a0/tmp/usr directory"
     exit 0
 fi
 
-# Secrets file path
+# Secrets file path - in /a0/usr (same for projects and settings)
 SECRETS_FILE="/a0/usr/secrets.env"
-SETTINGS_FILE="/a0/usr/settings.json"
+# Settings file path - in /a0/tmp/usr (settings + chat history volume)
+SETTINGS_FILE="/a0/tmp/usr/settings.json"
 
 # Track if any changes were made
 CHANGES_MADE=false
