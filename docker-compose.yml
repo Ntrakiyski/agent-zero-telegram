@@ -45,7 +45,7 @@ services:
       # OPTIONAL: Verbose startup logs
       # Set to "true" to see environment variable setup logs
       # ============================================================
-      - VERBOSE_SETUP=${VERBOSE_SETUP:-}
+      - VERBOSE_SETUP=${VERBOSE_SETUP:-true}
 
 volumes:
   agent-zero-data:

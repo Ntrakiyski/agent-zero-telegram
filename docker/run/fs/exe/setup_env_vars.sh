@@ -4,11 +4,23 @@
 # This script reads environment variables and writes them to usr/secrets.env and usr/settings.json
 # The app works fine without any environment variables - this is optional configuration
 
-# Quiet mode - only output if something is actually configured
-[ -z "$VERBOSE_SETUP" ] && exec >/dev/null 2>&1
+# Setup logging - show errors by default, show details if VERBOSE_SETUP=true
+if [ -n "$VERBOSE_SETUP" ]; then
+    echo "[setup_env_vars] Starting environment variable setup..."
+    exec 2>&1  # Show all output
+else
+    exec 2>&1  # Show errors but redirect stdout to /dev/null later
+    exec >/dev/null
+fi
+
+echo "[setup_env_vars] Setting up environment variables..."
 
 # Ensure usr directory exists
 mkdir -p /a0/usr 2>/dev/null
+if [ ! -d "/a0/usr" ]; then
+    echo "[setup_env_vars] ERROR: Cannot create /a0/usr directory"
+    exit 0
+fi
 
 # Secrets file path
 SECRETS_FILE="/a0/usr/secrets.env"
@@ -40,6 +52,7 @@ add_secret() {
     fi
 
     CHANGES_MADE=true
+    echo "[setup_env_vars] Set: $key"
 }
 
 # Function to update settings JSON
@@ -68,9 +81,19 @@ except:
 settings['$key'] = $value
 with open('$SETTINGS_FILE', 'w') as f:
     json.dump(settings, f, indent=4)
-" 2>/dev/null && CHANGES_MADE=true
+" 2>/dev/null && CHANGES_MADE=true && echo "[setup_env_vars] Set setting: $key = $value"
     fi
 }
+
+# Debug: Show environment variables (only in verbose mode)
+if [ -n "$VERBOSE_SETUP" ]; then
+    echo "[setup_env_vars] Environment variables found:"
+    [ -n "$TELEGRAM_BOT_TOKEN" ] && echo "  TELEGRAM_BOT_TOKEN: ***set***"
+    [ -n "$TELEGRAM_BOT_ALLOWED_USERS" ] && echo "  TELEGRAM_BOT_ALLOWED_USERS: $TELEGRAM_BOT_ALLOWED_USERS"
+    [ -n "$OPENROUTER_API_KEY" ] && echo "  OPENROUTER_API_KEY: ***set***"
+    [ -n "$API_KEY_OPENAI" ] && echo "  API_KEY_OPENAI: ***set***"
+    [ -n "$AUTH_LOGIN" ] && echo "  AUTH_LOGIN: $AUTH_LOGIN"
+fi
 
 # Process environment variables (all optional)
 # The app works perfectly fine without any of these
@@ -88,13 +111,10 @@ with open('$SETTINGS_FILE', 'w') as f:
 [ -n "$AUTH_LOGIN" ] && add_secret "AUTH_LOGIN" "$AUTH_LOGIN"
 [ -n "$AUTH_PASSWORD" ] && add_secret "AUTH_PASSWORD" "$AUTH_PASSWORD"
 
-# Only output if VERBOSE_SETUP is enabled
-if [ -n "$VERBOSE_SETUP" ]; then
-    if [ "$CHANGES_MADE" = true ]; then
-        echo "Environment variables configured."
-    else
-        echo "No environment variables to configure (this is normal)."
-    fi
+if [ "$CHANGES_MADE" = true ]; then
+    echo "[setup_env_vars] Configuration complete."
+else
+    echo "[setup_env_vars] No environment variables to configure (this is normal - configure in UI instead)."
 fi
 
 exit 0
