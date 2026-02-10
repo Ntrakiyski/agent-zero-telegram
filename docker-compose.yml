@@ -7,7 +7,18 @@ services:
     volumes:
       - agent-zero-data:/a0
     ports:
-      - "52080:80"
+      - "7643:80"
+    environment:
+      # Authentication
+      - AUTH_LOGIN=${AUTH_LOGIN}
+      - AUTH_PASSWORD=${AUTH_PASSWORD}
+
+      # LLM API Key (OpenRouter)
+      - API_KEY_OPENROUTER=${OPENROUTER_API_KEY}
+
+      # Telegram Bot (optional - for Telegram integration)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_BOT_ALLOWED_USERS=${TELEGRAM_BOT_ALLOWED_USERS}
 
 volumes:
   agent-zero-data:
