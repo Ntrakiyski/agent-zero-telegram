@@ -21,10 +21,9 @@ services:
       # Additional ports for agent tools and services
       - "9000-9009:9000-9009"
     # Persistent storage to preserve data between deployments
-    # IMPORTANT: /a0/usr and /a0/tmp must be separate volumes!
+    # Use Backup & Restore in Agent Zero UI as a second layer of safety
     volumes:
-      - agent-zero-data:/a0/usr      # Projects
-      - agent-zero-tmp:/a0/tmp       # Settings + chat history
+      - agent-zero-data:/a0
 
     # Environment variables from .env file or Coolify secrets
     environment:
@@ -94,4 +93,3 @@ services:
 
 volumes:
   agent-zero-data:
-  agent-zero-tmp:
