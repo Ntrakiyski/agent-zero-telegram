@@ -1,6 +1,11 @@
 # Agent Zero Docker Compose Configuration
-# For Coolify deployment, add environment variables in your Coolify project settings
-# The container startup script will automatically write these to usr/secrets.env
+#
+# Environment variables are OPTIONAL - the app works without them.
+# You can configure everything through the web UI after deployment.
+#
+# For Coolify deployment, add environment variables in your Coolify project
+# settings. The container startup script will automatically write them to
+# usr/secrets.env for you.
 
 services:
   agent-zero:
@@ -15,33 +20,32 @@ services:
       - "7643:80"
     environment:
       # ============================================================
-      # Authentication (recommended for production)
+      # OPTIONAL: Authentication
+      # Can also be configured in the web UI under Settings
       # ============================================================
-      - AUTH_LOGIN=${AUTH_LOGIN}
-      - AUTH_PASSWORD=${AUTH_PASSWORD}
+      - AUTH_LOGIN=${AUTH_LOGIN:-}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
 
       # ============================================================
-      # LLM API Keys (required for agent to work)
+      # OPTIONAL: LLM API Keys
+      # Can also be configured in the web UI under Settings > API Keys
       # ============================================================
-      # OpenRouter (recommended - supports many models)
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      # Or use OpenAI directly:
-      # - API_KEY_OPENAI=${API_KEY_OPENAI}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - API_KEY_OPENAI=${API_KEY_OPENAI:-}
 
       # ============================================================
-      # Telegram Bot Integration (optional)
-      # ============================================================
+      # OPTIONAL: Telegram Bot Integration
       # Get your token from @BotFather on Telegram
-      # When set, the bot will automatically be enabled
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      # Optional: Restrict access to specific Telegram user IDs
-      - TELEGRAM_BOT_ALLOWED_USERS=${TELEGRAM_BOT_ALLOWED_USERS}
+      # Can also be configured in the web UI under Settings > Secrets
+      # ============================================================
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_BOT_ALLOWED_USERS=${TELEGRAM_BOT_ALLOWED_USERS:-}
 
       # ============================================================
-      # Additional Configuration (optional)
+      # OPTIONAL: Verbose startup logs
+      # Set to "true" to see environment variable setup logs
       # ============================================================
-      # Enable telegram bot via settings (auto-enabled when TOKEN is set)
-      - A0_SET_TELEGRAM_BOT_ENABLED=${TELEGRAM_BOT_ENABLED:-true}
+      - VERBOSE_SETUP=${VERBOSE_SETUP:-}
 
 volumes:
   agent-zero-data:
