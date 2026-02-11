@@ -470,7 +470,7 @@ class CodeExecution(Tool):
         output = re.sub(r"(?<!\\)\\x[0-9A-Fa-f]{2}", "", output)
         # Strip every line of output before truncation
         # output = "\n".join(line.strip() for line in output.splitlines())
-        output = truncate_text_agent(agent=self.agent, output=output, threshold=1000000) # ~1MB, larger outputs should be dumped to file, not read from terminal
+        output = truncate_text_agent(agent=self.agent, output=output, threshold=100000) # ~100KB, larger outputs should be dumped to file, not read from terminal
         return output
 
     async def ensure_cwd(self) -> str | None:

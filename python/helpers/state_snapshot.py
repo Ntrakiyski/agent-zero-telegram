@@ -226,6 +226,12 @@ async def build_snapshot_from_request(*, request: StateRequestV1) -> SnapshotV1:
 
     logs = active_context.log.output(start=from_no) if active_context else []
 
+    # Safety cap: limit the number of log items per push to prevent oversized
+    # WebSocket payloads (e.g., after reconnect with a large backlog).
+    MAX_LOGS_PER_PUSH = 200
+    if len(logs) > MAX_LOGS_PER_PUSH:
+        logs = logs[-MAX_LOGS_PER_PUSH:]
+
     notification_manager = AgentContext.get_notification_manager()
     notifications = notification_manager.output(start=notifications_from_no)
 

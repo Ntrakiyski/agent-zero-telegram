@@ -322,6 +322,19 @@ class StateMonitor:
                     f"[StateMonitor] emit skipped: dispatcher closing namespace={namespace} sid={sid}"
                 )
                 return
+            except Exception as exc:
+                # Catch-all for unexpected emission failures (e.g., payload too large,
+                # serialization error, transport error) to prevent the push task from
+                # crashing the server.
+                PrintStyle.warning(
+                    f"[StateMonitor] emit failed for namespace={namespace} sid={sid}: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+                _debug_log(
+                    f"[StateMonitor] emit failed: {type(exc).__name__}: {exc} "
+                    f"namespace={namespace} sid={sid}"
+                )
+                return
         finally:
             follow_up = False
             dirty_version = 0
