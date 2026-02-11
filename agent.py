@@ -335,6 +335,7 @@ class LoopData:
         self.params_temporary: dict = {}
         self.params_persistent: dict = {}
         self.current_tool = None
+        self.consecutive_repeat_count = 0  # Track consecutive duplicate responses
 
         # override values with kwargs
         for key, value in kwargs.items():
@@ -473,17 +474,31 @@ class Agent:
                         if (
                             self.loop_data.last_response == agent_response
                         ):  # if assistant_response is the same as last message in history, let him know
+                            # Increment consecutive repeat counter
+                            self.loop_data.consecutive_repeat_count += 1
+
                             # Append the assistant's response to the history
                             self.hist_add_ai_response(agent_response)
+
                             # Append warning message to the history
                             warning_msg = self.read_prompt("fw.msg_repeat.md")
                             self.hist_add_warning(message=warning_msg)
-                            PrintStyle(font_color="orange", padding=True).print(
-                                warning_msg
-                            )
-                            self.context.log.log(type="warning", content=warning_msg)
 
-                        else:  # otherwise proceed with tool
+                            # Log with count for debugging
+                            count_msg = f"{warning_msg} (consecutive count: {self.loop_data.consecutive_repeat_count}/5)"
+                            PrintStyle(font_color="orange", padding=True).print(count_msg)
+                            self.context.log.log(type="warning", content=count_msg)
+
+                            # Stop agent after 5 consecutive duplicates
+                            if self.loop_data.consecutive_repeat_count >= 5:
+                                raise HandledException(
+                                    f"Agent stopped: Generated same response {self.loop_data.consecutive_repeat_count} times in a row. "
+                                    "This indicates agent is stuck in a loop and needs human intervention."
+                                )
+
+                        else:  # otherwise proceed with tool (reset counter on success)
+                            # Reset consecutive repeat counter on successful/different response
+                            self.loop_data.consecutive_repeat_count = 0
                             # Append the assistant's response to the history
                             self.hist_add_ai_response(agent_response)
                             # process tools requested in agent message
